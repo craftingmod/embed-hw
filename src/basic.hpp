@@ -1,9 +1,8 @@
 #pragma once
 
 #define uint unsigned long
+#define PIN unsigned char
+#define DEBUG true
 
-void _setup();
-
-void _loop();
-
-const bool debug = true;
+#define CARD1 0xB9CF5239
+#define CARD2 0x2A46E8D4

@@ -52,7 +52,7 @@ void initMFRC() {
 
 void taskMFRC(const uint &time, const uint &microTime) {
   if (time - Timestamp::mfrcCheck < RFID_INTERVAL) {
-    // return;
+    return;
   }
   Timestamp::mfrcCheck = time;
   // RFID 리더에 카드가 없을 때 취소
@@ -80,9 +80,11 @@ void taskMFRC(const uint &time, const uint &microTime) {
   }
   // 키 읽기
   uint32_t keyUUID = UID4ToUInt(&rfid.uid.uidByte[0]);
-  Serial.println();
-  Serial.println(keyUUID, DEC);
-  printHex(&rfid.uid.uidByte[0], 4);
+  Serial.print("Card UUID: ");
+  Serial.print(keyUUID, HEX);
+  Serial.print("(");
+  Serial.print(keyUUID, DEC);
+  Serial.println(")");
 
   // 마무리
   rfid.PICC_HaltA();
