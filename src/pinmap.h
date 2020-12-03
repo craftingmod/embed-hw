@@ -1,16 +1,16 @@
 #include "basic.hpp"
+#include "univ/bool8.hpp"
 
 #pragma once
 
 const PIN OUTPUT_PINS[] = {2};
 #define OUTPUT_PINS_LN 1
-const PIN INPUT_PINS[] = {3, 4, 5, 6, 7, 8, 9, 10};
-#define INPUT_PINS_LN 8
 
 
-const PIN SONIC_PINS[] = {3, 4, 5, 6, 7, 8, 9, 10};
+const PIN SONIC_PINS[] = {3, 4};
+const bool SONIC_ANALOG[] = {false, false};
 #define SONIC_TRIG_PIN 2
-#define SONIC_PINS_LN 8
+#define SONIC_PINS_LN 2
 
 #define SONIC1_RECV_PIN 3
 #define SONIC2_RECV_PIN 4

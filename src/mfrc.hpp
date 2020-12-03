@@ -1,8 +1,6 @@
 #pragma once
 
 #include "basic.hpp"
-#include <SPI.h>
-#include <MFRC522.h>
 
 #define RFID_INTERVAL 50
 #define SS_PIN 10
@@ -20,4 +18,7 @@ uint UID4ToUInt(byte uidbyte[10]);
 
 void initMFRC();
 
-void taskMFRC(const uint32_t &time, const uint32_t &microTime);
+void taskMFRC();
+
+uint getCardUUID();
+void setCardUUID(uint uuid);

@@ -1,4 +1,7 @@
+#include "basic.hpp"
 #include "mfrc.hpp"
+#include <SPI.h>
+#include <MFRC522.h>
 
 // 허용되는 키들
 const MFRC522::PICC_Type allowedKey[] = {MFRC522::PICC_TYPE_MIFARE_MINI, MFRC522::PICC_TYPE_MIFARE_1K, MFRC522::PICC_TYPE_MIFARE_4K};
@@ -11,7 +14,6 @@ uint cardUUID = 0;
 namespace Timestamp {
   uint mfrcCheck = 0;
 }
-
 
 //16진수로 변환하는 함수
 void printHex(byte *buffer, byte bufferSize) {
@@ -50,7 +52,8 @@ void initMFRC() {
   rfid.PCD_Init();
 }
 
-void taskMFRC(const uint &time, const uint &microTime) {
+void taskMFRC() {
+  const uint time = millis();
   if (time - Timestamp::mfrcCheck < RFID_INTERVAL) {
     return;
   }
@@ -79,7 +82,8 @@ void taskMFRC(const uint &time, const uint &microTime) {
     return;
   }
   // 키 읽기
-  uint32_t keyUUID = UID4ToUInt(&rfid.uid.uidByte[0]);
+  uint keyUUID = UID4ToUInt(&rfid.uid.uidByte[0]);
+  cardUUID = keyUUID;
   Serial.print("Card UUID: ");
   Serial.print(keyUUID, HEX);
   Serial.print("(");
@@ -89,4 +93,12 @@ void taskMFRC(const uint &time, const uint &microTime) {
   // 마무리
   rfid.PICC_HaltA();
   rfid.PCD_StopCrypto1();
+}
+
+uint getCardUUID() {
+  return cardUUID;
+}
+
+void setCardUUID(uint uuid) {
+  cardUUID = uuid;
 }

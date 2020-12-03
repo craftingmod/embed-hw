@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>
 
 #define uint unsigned long
 #define PIN unsigned char
