@@ -8,6 +8,13 @@
 
 #define ALLOWED_KEYS 3
 
+// 부우저
+#define BOOSER_DURATION 200
+// 카드1 hz
+#define CARD1_HZ 784
+// 카드2 hz
+#define CARD2_HZ 1760
+
 void printHex(byte *buffer, byte bufferSize);
 
 void printDec(byte *buffer, byte bufferSize);

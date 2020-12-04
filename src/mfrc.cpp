@@ -1,7 +1,9 @@
 #include "basic.hpp"
 #include "mfrc.hpp"
+#include "pinmap.h"
 #include <SPI.h>
 #include <MFRC522.h>
+
 
 // 허용되는 키들
 const MFRC522::PICC_Type allowedKey[] = {MFRC522::PICC_TYPE_MIFARE_MINI, MFRC522::PICC_TYPE_MIFARE_1K, MFRC522::PICC_TYPE_MIFARE_4K};
@@ -13,6 +15,7 @@ uint cardUUID = 0;
 
 namespace Timestamp {
   uint mfrcCheck = 0;
+  uint buzzerTime = 0;
 }
 
 //16진수로 변환하는 함수
@@ -54,6 +57,10 @@ void initMFRC() {
 
 void taskMFRC() {
   const uint time = millis();
+  if (Timestamp::buzzerTime >= 1 && time - Timestamp::buzzerTime >= BOOSER_DURATION) {
+    Timestamp::buzzerTime = 0;
+    noTone(BUZZER_PIN);
+  }
   if (time - Timestamp::mfrcCheck < RFID_INTERVAL) {
     return;
   }
@@ -89,6 +96,15 @@ void taskMFRC() {
   Serial.print("(");
   Serial.print(keyUUID, DEC);
   Serial.println(")");
+
+  // 부우저내기
+  if (keyUUID == CARD1) {
+    tone(BUZZER_PIN, CARD1_HZ);
+    Timestamp::buzzerTime = millis();
+  } else if (keyUUID == CARD2) {
+    tone(BUZZER_PIN, CARD2_HZ);
+    Timestamp::buzzerTime = millis();
+  }
 
   // 마무리
   rfid.PICC_HaltA();

@@ -3,20 +3,13 @@
 
 #pragma once
 
-const PIN OUTPUT_PINS[] = {2};
-#define OUTPUT_PINS_LN 1
+const PIN OUTPUT_PINS[] = {2, 6};
+#define OUTPUT_PINS_LN 2
 
+const PIN BUZZER_PIN = 6;
 
-const PIN SONIC_PINS[] = {3, 4};
-const bool SONIC_ANALOG[] = {false, false};
+const PIN SONIC_PINS[] = {3, 4, 7, 8, A0, A1, A2, A3};
+// deprecated but just for compile
+const bool SONIC_ANALOG[] = {false, false, false, false, false, false, false, false};
 #define SONIC_TRIG_PIN 2
-#define SONIC_PINS_LN 2
-
-#define SONIC1_RECV_PIN 3
-#define SONIC2_RECV_PIN 4
-#define SONIC3_RECV_PIN 5
-#define SONIC4_RECV_PIN 6
-#define SONIC5_RECV_PIN 7
-#define SONIC6_RECV_PIN 8
-#define SONIC7_RECV_PIN 9
-#define SONIC8_RECV_PIN 10
+#define SONIC_PINS_LN 8

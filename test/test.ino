@@ -16,7 +16,6 @@ void loop() {
 
   long T = pulseIn(3, HIGH);
   float L = T / 58.82;
-
   Serial.println(L);
   delay(500);
 }

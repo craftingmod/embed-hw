@@ -19,9 +19,6 @@ public:
    * offset의 bool값 리턴
    */
   bool getBool(uint8_t offset) {
-    if (offset >= 8 || offset < 0) {
-      return false;
-    }
     return (data & (B1 << offset)) != B0;
   }
   void setBool(uint8_t offset, const bool value) {
@@ -39,5 +36,8 @@ public:
   }
   bool operator<<(uint8_t offset) {
     return this->getBool(offset);
+  }
+  uint8_t getRaw() {
+    return data;
   }
 };

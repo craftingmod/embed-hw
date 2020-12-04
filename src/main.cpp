@@ -11,9 +11,7 @@ void _setup() {
     digitalWrite(OUTPUT_PINS[i], LOW);
   }
   for (byte i = 0; i < SONIC_PINS_LN; i += 1) {
-    if (!SONIC_ANALOG[i]) {
-      pinMode(SONIC_PINS[i], INPUT);
-    }
+    pinMode(SONIC_PINS[i], INPUT);
   }
 }
 
