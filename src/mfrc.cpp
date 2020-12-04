@@ -59,7 +59,6 @@ void taskMFRC() {
   const uint time = millis();
   if (Timestamp::buzzerTime >= 1 && time - Timestamp::buzzerTime >= BOOSER_DURATION) {
     Timestamp::buzzerTime = 0;
-    noTone(BUZZER_PIN);
   }
   if (time - Timestamp::mfrcCheck < RFID_INTERVAL) {
     return;
@@ -96,15 +95,6 @@ void taskMFRC() {
   Serial.print("(");
   Serial.print(keyUUID, DEC);
   Serial.println(")");
-
-  // 부우저내기
-  if (keyUUID == CARD1) {
-    tone(BUZZER_PIN, CARD1_HZ);
-    Timestamp::buzzerTime = millis();
-  } else if (keyUUID == CARD2) {
-    tone(BUZZER_PIN, CARD2_HZ);
-    Timestamp::buzzerTime = millis();
-  }
 
   // 마무리
   rfid.PICC_HaltA();

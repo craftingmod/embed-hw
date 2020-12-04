@@ -1,10 +1,12 @@
 #pragma once
 
+#include "basic.hpp"
 #include "univ/pin2.hpp"
 #include "pinmap.h"
 #include "univ/bool8.hpp"
 #include "mfrc.hpp"
 #include "cardetect.hpp"
+#include <Wire.h>
 
 #define LAST_STATE 0
 #define DETERMINED 1
@@ -17,17 +19,28 @@
 #define ECHO 1
 
 // 타임아웃 (microsecond)
-#define SONIC_TIMEOUT 24000
+#define SONIC_TIMEOUT 20000
 // 갱신 주기..
-#define DETECT_INTERVAL 200
+#define DETECT_INTERVAL 150
+// LED 갱신
+#define LED_INTERVAL 100
 // 있다는걸 감지하는 최대 거리
-#define SONIC_DISTANCE 20
+#define SONIC_DISTANCE 10
+#define SONIC_MINDISTANCE 3
 // 최대 초음파센서 길이
-#define MAX_DISTANCE 400
+#define MAX_DISTANCE 200
 // 인덱스
-#define AUTH_SONIC 0
+#define AUTH_SONIC 7
+// 버퍼 카운트
+#define BUF_COUNT 5
 // 모두 확인완료 비트
 const byte DONE_BIT = (byte)((unsigned short)(1 << SONIC_PINS_LN) - 1);
+
+int sortFloat(const void* cmp1, const void* cmp2) {
+  float a = *((float *)cmp1);
+  float b = *((float *)cmp2);
+  return b - a;
+}
 
 class UltraSonic {
 private:
@@ -170,7 +183,7 @@ public:
       }
       uint cardUUID = getCardUUID();
       bool last = lastStates[i];
-      bool current = sonic.getDistance() >= 0 && sonic.getDistance() <= SONIC_DISTANCE;
+      bool current = sonic.getDistance() >= SONIC_MINDISTANCE && sonic.getDistance() <= SONIC_DISTANCE;
       if (!last && current) {
         if (i == AUTH_SONIC) {
           // read auth
@@ -187,6 +200,7 @@ public:
         // come in
       } else if (last && !current) {
         if (i == AUTH_SONIC) {
+          cardUUID = 0;
           if (cardUUID == CARD1 || cardUUID == CARD2) {
             // accepted
             cardUUID = 0;
@@ -227,21 +241,29 @@ private:
   PIN echoPins[SONIC_PINS_LN];
   Bool8 lastIsError;
   Bool8 detected;
-  Bool8 lastStates;
   uint8_t triggerPIN;
   uint16_t timeout;
-  CarEvent currentEvents[SONIC_PINS_LN];
   uint risingTimes[SONIC_PINS_LN];
   uint fallingTimes[SONIC_PINS_LN];
 public:
+  Bool8 lastStates;
   float distances[SONIC_PINS_LN];
+  float buffered_distance[SONIC_PINS_LN][BUF_COUNT];
+  char buffered_count;
+  CarEvent lastEvents[SONIC_PINS_LN];
+  CarEvent currentEvents[SONIC_PINS_LN];
   SonicGroupV2(uint8_t trigger, uint16_t timeout) {
     triggerPIN = trigger;
     this->timeout = timeout;
+    buffered_count = 0;
     for (byte i = 0; i < SONIC_PINS_LN; i += 1) {
       echoPins[i] = SONIC_PINS[i];
       currentEvents[i] = CarEvent::NOTHING;
+      lastEvents[i] = CarEvent::NOTHING;
       distances[i] = -1;
+      for (byte k = 0; k < BUF_COUNT; k += 1) {
+        buffered_distance[i][k] = 0;
+      }
     }
   }
   void reset() {
@@ -256,7 +278,7 @@ public:
       uint cardUUID = getCardUUID();
       float distance = distances[i];
       bool last = lastStates[i];
-      bool current = distance >= 0 && distance <= SONIC_DISTANCE;
+      bool current = distance >= SONIC_MINDISTANCE && distance <= SONIC_DISTANCE;
       if (!last && current) {
         if (i == AUTH_SONIC) {
           // read auth
@@ -303,6 +325,14 @@ public:
     }
     Serial.println();
   }
+  void printIn() {
+    Serial.print("[IN] ");
+    for (byte i = 0; i < SONIC_PINS_LN; i += 1) {
+      Serial.print(lastStates[i] ? 1 : 0);
+      Serial.print(' ');
+    }
+    Serial.println();
+  }
   void triggerSync() {
     // 1. reset
     reset();
@@ -310,8 +340,10 @@ public:
     digitalWrite(triggerPIN, LOW);
     delayMicroseconds(2);
     digitalWrite(triggerPIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(triggerPIN, LOW);
     // 3. define variables
-    bool turnedOff = false;
+    bool turnedOff = true;
     Bool8 completed;
     Bool8 lastStat;
     uint startMicro = micros();
@@ -351,16 +383,29 @@ public:
     }
     // 5. store data
     for (byte i = 0; i < SONIC_PINS_LN; i += 1) {
+      if (BUF_COUNT > 1 && buffered_count >= BUF_COUNT - 1) {
+        // flush distance
+        qsort(buffered_distance[i], BUF_COUNT, sizeof(float), sortFloat);
+        distances[i] = buffered_distance[i][BUF_COUNT/2];
+      }
       if (fallingTimes[i] == 0) {
         // OutOfBounds
-        if (lastIsError[i]) {
-          distances[i] = -1;
+        if (BUF_COUNT >= 2) {
+          buffered_count = (buffered_count + 1) % BUF_COUNT;
+          buffered_distance[i][buffered_count] = -1;
         } else {
-          lastIsError.setBool(i, true);
+          distances[i] = -1;
         }
+          // distances[i] = -1;
       } else {
-        lastIsError.setBool(i, false);
-        distances[i] = (float)(fallingTimes[i] - risingTimes[i]) / 58.82;
+        if (BUF_COUNT >= 2) {
+          buffered_count = (buffered_count + 1) % BUF_COUNT;
+          buffered_distance[i][buffered_count] = (float)(fallingTimes[i] - risingTimes[i]) / 58.82;
+        } else {
+          distances[i] = (float)(fallingTimes[i] - risingTimes[i]) / 58.82;
+        }
+        // lastIsError.setBool(i, false);
+        // distances[i] = (float)(fallingTimes[i] - risingTimes[i]) / 58.82;
       }
     }
     // 6. read status for use
@@ -370,20 +415,61 @@ public:
 
 namespace Timestamp {
   uint sonicCheck = 0;
+  uint ledCheck = 0;
 }
 
 SonicGroupV2 sonicManager(SONIC_TRIG_PIN, SONIC_TIMEOUT);
 byte printCount = 0;
+const byte RISING_CODE[] = {11, 12, 13, 14, 15, 16, 17, 1};
+const byte FALLING_CODE[] = {21, 22, 23, 24, 25, 26, 27, 2};
+Bool8 deltaEvent;
+
+void requestI2C() {
+  for (byte i = 0; i < SONIC_PINS_LN - 1; i += 1) {
+    if (sonicManager.lastEvents[i] != sonicManager.currentEvents[i]) {
+      deltaEvent.setBool(i, true);
+      // statusC.setBool(i, sonicManager.currentEvents[i] == CarEvent::NORMAL_1T0);
+      sonicManager.lastEvents[i] = sonicManager.currentEvents[i];
+    }
+  }
+  byte code = 1;
+  for (byte i = 0; i < SONIC_PINS_LN - 1; i += 1) {
+    if (deltaEvent[i]) {
+      deltaEvent.setBool(i, false);
+      if (sonicManager.currentEvents[i] == CarEvent::NORMAL_1T0) {
+        code = FALLING_CODE[i];
+      } else {
+        code = RISING_CODE[i];
+      }
+      break;
+    }
+  }
+  if (code >= 10) {
+    Wire.write(code);
+  }
+  // Serial.print("[I2C] Code: ");
+  // Serial.println(code);
+}
 
 void taskScan() {
   const uint time = millis();
   if (time - Timestamp::sonicCheck >= DETECT_INTERVAL) {
     Timestamp::sonicCheck = time;
     sonicManager.triggerSync();
-    if (++printCount >= 5) {
+    if (++printCount >= BUF_COUNT) {
       printCount = 0;
       sonicManager.printDistance();
-      sonicManager.printStatus();
+      sonicManager.printIn();
+    }
+  }
+  if (time - Timestamp::ledCheck >= LED_INTERVAL) {
+    Timestamp::ledCheck = time;
+    if (getCardUUID() == CARD1 || getCardUUID() == CARD2) {
+      digitalWrite(LED_RED, HIGH);
+      digitalWrite(LED_GREEN, LOW);
+    } else {
+      digitalWrite(LED_RED, LOW);
+      digitalWrite(LED_GREEN, HIGH);
     }
   }
 }
